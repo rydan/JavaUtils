@@ -4,54 +4,50 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.stream.util.StreamReaderDelegate;
+import javax.xml.transform.stream.StreamSource;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Class with utility methods to marshall/unmarshall between XML and different object types
- * Can either be used with the static methods directly.
- * It can also be instantiated for marshalling/unmarshalling a single class.
- * This is more efficient if many objects need marshalling/unmarshalling.
- *
- * Created by PARY04 on 2015-10-29.
+ * marshallers are cached, to prevent frequent expensive creation...
  */
 
 public class Marshalling <T> {
 
-    private final Marshaller marshaller;
-    private final Unmarshaller unmarshaller;
-
-    public Marshalling(Class<T> clazz) throws JAXBException {
-        JAXBContext jaxbContext = JAXBContext.newInstance(clazz);
-        unmarshaller = jaxbContext.createUnmarshaller();
-        marshaller = jaxbContext.createMarshaller();
-    }
-
-    public String marshall(T object) throws JAXBException {
-        StringWriter stringWriter = new StringWriter();
-        marshaller.marshal(object, stringWriter);
-        return stringWriter.toString();
-    }
-
-    public T unmarshall(String xml) throws JAXBException {
-        StringReader stringReader = new StringReader(xml);
-        return (T) unmarshaller.unmarshal(stringReader);
-    }
+    protected static Map<Class, Marshaller> marshallers = new HashMap<>();
+    protected static Map<Class, Unmarshaller> unmarshallers = new HashMap<>();
 
 
     public static <T> String marshall(T object, Class<T> clazz) throws JAXBException {
-        JAXBContext jaxbContext = JAXBContext.newInstance(clazz);
-        Marshaller marshaller = jaxbContext.createMarshaller();
+        Marshaller marshaller = marshallers.get(clazz);
+        if (null == marshaller) {
+            JAXBContext jaxbContext = JAXBContext.newInstance(clazz);
+            marshaller = jaxbContext.createMarshaller();
+            marshallers.put(clazz, marshaller);
+        }
         StringWriter stringWriter = new StringWriter();
         marshaller.marshal(object, stringWriter);
         return stringWriter.toString();
     }
 
     public static <T> T unmarshal(String xml, Class<T> clazz) throws JAXBException {
-        JAXBContext jaxbContext = JAXBContext.newInstance(clazz);
-        Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+        Unmarshaller unmarshaller = unmarshallers.get(clazz);
+        if (null == unmarshaller) {
+            JAXBContext jaxbContext = JAXBContext.newInstance(clazz);
+            unmarshaller = jaxbContext.createUnmarshaller();
+            unmarshallers.put(clazz, unmarshaller);
+        }
         StringReader stringReader = new StringReader(xml);
-       return (T) unmarshaller.unmarshal(stringReader);
+        return unmarshaller.unmarshal(new StreamSource(stringReader), clazz).getValue();
+    }
+
+    public static void clearMarshallerCache() {
+        marshallers = new HashMap<>();
+        unmarshallers = new HashMap<>();
     }
 
 }
