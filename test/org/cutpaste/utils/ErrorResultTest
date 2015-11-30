@@ -1,0 +1,29 @@
+package org.cutpaste.utils;
+
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class ErrorResultTest {
+
+    @Test
+    public void testHasError() throws Exception {
+        assertTrue(new ErrorResult<String, String>("Error", null).hasError());
+    }
+
+    @Test
+    public void testGetError() throws Exception {
+        assertEquals("Error", new ErrorResult<String, String>("Error", null).getError());
+    }
+
+    @Test
+    public void testGetResult() throws Exception {
+        assertEquals("Result", new ErrorResult<>("Error", "Result").getResult());
+    }
+
+    @Test
+    public void testGetResultOrDefault() throws Exception {
+        assertEquals("Default", new ErrorResult<String, String>("Error", null).getResultOrDefault("Default"));
+    }
+}
