@@ -1,0 +1,35 @@
+package org.cutpaste.utils;
+
+/**
+ *
+ * A NodeJS-like class for returning both result and error/warning information.
+ *
+ * @param <ERR> error, or null if no error
+ * @param <RES> result, or possibly null if error prevents result from being generated
+ */
+
+public class ErrorResult<ERR, RES> {
+    private ERR error;
+    private RES result;
+
+    public ErrorResult(ERR err, RES res) {
+        this.error = err;
+        this.result = res;
+    }
+
+    public boolean hasError() {
+        return null != error;
+    }
+
+    public ERR getError() {
+        return error;
+    }
+
+    public RES getResult() {
+        return result;
+    }
+
+    public RES getResultOrDefault(RES defaultResult) {
+        return null != result ? result : defaultResult;
+    }
+}
