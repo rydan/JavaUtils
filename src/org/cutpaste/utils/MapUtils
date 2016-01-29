@@ -1,28 +1,32 @@
 package org.cutpaste.utils;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class MapUtils {
+@FunctionalInterface
+interface KeyProvider<KEY, VALUE> {
+    KEY getKey(VALUE value);
+}
 
+public class MapUtils {
+    
     /**
-     * @param values The list to make into a map
-     * @param keyGetterMethodName the name of the method on each object in list that should be called to get the key
-     * @param keyClass the class of the key
-     * @return a map, with the list objects as values, and the result from calling the named method on the object as key
-     * @throws NoSuchMethodException
-     * @throws InvocationTargetException
-     * @throws IllegalAccessException
+     * Utility to turn a list of objects into a map of those objects
+     * Each object is keyed on the key determined by the supplied KeyProvider function
+     *
+     * @param values the objects to turn into a map
+     * @param keyProvider functional interface to determin the key to be used for each object
+     * @param <KEY> Key type
+     * @param <VALUE> Value type
+     * @return map representation of the objects in the list
      */
-    public static <KEY, VALUE>Map<KEY, VALUE> asMap(List<VALUE> values, String keyGetterMethodName, Class<KEY> keyClass) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    public static <KEY, VALUE>Map<KEY, VALUE> asMap(List<VALUE> values, KeyProvider<KEY, VALUE> keyProvider) {
         HashMap<KEY, VALUE> result = new HashMap<>();
         for (VALUE value : values) {
-            Method getterMethod = value.getClass().getMethod(keyGetterMethodName);
-            result.put((KEY) getterMethod.invoke(value), value);
+            result.put(keyProvider.getKey(value), value);
         }
         return result;
     }
 }
+
