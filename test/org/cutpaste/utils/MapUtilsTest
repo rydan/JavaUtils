@@ -18,7 +18,7 @@ public class MapUtilsTest {
         TestObject<String> testObj3 = new TestObject<>("Key3", "Data3");
         testObjects.add(testObj3);
 
-        Map<String, TestObject<String>> map = MapUtils.asMap(testObjects, "getKey", String.class);
+        Map<String, TestObject<String>> map = Util.asMap(testObjects, TestObject::getKey);
         assertEquals(3, map.size());
         assertEquals(testObj1, map.get("Key1"));
         assertEquals(testObj2, map.get("Key2"));
@@ -30,7 +30,7 @@ public class MapUtilsTest {
         anotherTestObjects.add(noterTest1);
         anotherTestObjects.add(noterTest2);
 
-        Map<TestObject, TestObject<TestObject<String>>> anotherMap = MapUtils.asMap(anotherTestObjects, "getKey", TestObject.class);
+        Map<TestObject, TestObject<TestObject<String>>> anotherMap = Util.asMap(anotherTestObjects, TestObject::getKey);
         assertEquals(2, anotherMap.size());
         assertEquals(noterTest1, anotherMap.get(testObj1));
         assertEquals(noterTest2, anotherMap.get(testObj2));
