@@ -1,0 +1,124 @@
+A generic diff engine. Might be needing some more work, but might be good to have...
+
+/**
+     * This method is a generic diff engine, capable of taking two lists and a list of comparison logic
+     * find the matching objects in the two lists (objects match when the result or applying the supplied getKeyForTypeFunction on them are equal)
+     * and the applying all comparison logics on those two objects, one at a time.
+     * The end result will be a list of DiffPairs, one for each parameter that differe between two objects with the same Key.
+     * There will also be diffs for when a object in one list doesn't exist in the other
+     *
+     * @param systemOneTypes the first list of objects to be compared
+     * @param systemTwoTypes the second list of objects to be compared
+     * @param getKeyForTypeFunction the function to get the "ID" for an object, that is, the way to find what object in list one shold be matched to what object in list two
+     * @param keyDifferenceFieldName The text that should be filled in the DiffPair, describing what parameter is being compared
+     * @param comparisonsToPerform list of DiffComparator, encapsulating logif for comparing two objects
+     * @param <TYPE> the type of object being compared
+     * @return
+     */
+
+    static <TYPE> List<DiffPair> diffGeneric(List<TYPE> systemOneTypes, List<TYPE> systemTwoTypes, Function<TYPE, String> getKeyForTypeFunction, String keyDifferenceFieldName, List<DiffComparator<TYPE>> comparisonsToPerform) {
+        ArrayList<DiffPair> result = new ArrayList<>();
+        //Set up a map of the objects in list two, with the result of applying the getKeyForTypeFunction on the object as key
+        Map<String, TYPE> systemTwoComparisonMap = Util.asMap(systemTwoTypes, getKeyForTypeFunction);
+        for (TYPE systemOneType : systemOneTypes) {
+            String systemOneTypeKey = getKeyForTypeFunction.apply(systemOneType);
+            if (systemTwoComparisonMap.containsKey(systemOneTypeKey)) {
+                //So, we have a object in listTwo that matches an object in listOne. Fetch the object and compare them using the diff comparators
+                TYPE systemTwoType = systemTwoComparisonMap.get(systemOneTypeKey);
+                //Do comparisons
+                for (DiffComparator<TYPE> comparison : comparisonsToPerform) {
+                    //For each diffComparator start by applying the batchCompare
+                    List<DiffPair> resultPairs = comparison.diffBatch(systemOneType, systemTwoType);
+                    //Then do the single compare
+                    resultPairs.add(comparison.diffSingle(systemOneType, systemTwoType, keyDifferenceFieldName, systemOneTypeKey));
+                    for (DiffPair diff : resultPairs) {
+                        if (diff.isActualDiff()) {
+                            //Go through the diff paris, and only add those that are actually different between the two compared objects to the results list
+                            result.add(diff);
+                        }
+                    }
+                }
+            } else {
+                //If we didn't find the key for an object in list one in the map, then that object is missing in listTwo. Diff it as missing.
+                result.add(new DiffPair(keyDifferenceFieldName, systemOneTypeKey, "Missing"));
+            }
+            //We are done comparing this object, remove it from the comparison map
+            systemTwoComparisonMap.remove(systemOneTypeKey);
+        }
+        //Now add accounts missing in EFX. Since we remove objects once we have finished comparing them, any objects left in the map are clearly missing from listOne
+        for (String systemTwoTypeKey : systemTwoComparisonMap.keySet()) {
+            result.add(new DiffPair(keyDifferenceFieldName, "Missing", systemTwoTypeKey));
+        }
+        return result;
+    }
+    
+    /**
+ * Class for creating diffs, as used in DiffUtil.diffGeneric.
+ * Both diffBatch and diffSingle will be called by diffGeneric, in that order (*
+ */
+ 
+ 
+ 
+ 
+public abstract class DiffComparator<TYPE> {
+    /**
+     * This method will be called first by diffGeneric. It's default implementation returns an empty list of DiffPairs
+     * This method can be overridden when a single comparison step would need to de a lot of comparisons, for instance when compairing
+     * lists of objects in the two comparison objects. This is most often accomplished by having this diff method in turn setup diff comparators and
+     * call diffGeneric for each of those lists of objects.
+     *
+     * @param systemOneType first object to compare
+     * @param systemTwoType second object to compare
+     * @return list of DiffPairs
+     */
+    public List<DiffPair> diffBatch(TYPE systemOneType, TYPE systemTwoType) {
+        return new ArrayList<>();
+    }
+
+    /**
+     * @param first first object to compare
+     * @param second second object to compare
+     * @param keyDifferenceFieldName the field name to use in the DiffPair "field" information
+     * @param keyValue the key value for the containing object
+     * @return DiffPair of the compared value
+     */
+    public DiffPair diffSingle(TYPE first, TYPE second, String keyDifferenceFieldName, String keyValue) {
+        return new DiffPair("Empty", "Empty", "Empty");
+    }
+}
+
+/**
+ * Represents a diff (comparison) of two values, with information about what field is being compared
+ */
+public class DiffPair {
+    @XmlElement
+    private final String fieldName;
+    @XmlElement
+    private final String valueInSystem;
+    @XmlElement
+    private final String valueInComparisonSystem;
+
+    public DiffPair(String fieldName, String valueInSystem, String valueInComparisonSystem) {
+        this.fieldName = fieldName.trim();
+        this.valueInSystem = valueInSystem != null ? valueInSystem.trim() : "null";
+        this.valueInComparisonSystem = valueInComparisonSystem != null ? valueInComparisonSystem.trim() : "null";
+    }
+
+    public String getFieldName() {
+        return fieldName;
+    }
+
+    public String getValueInSystem() {
+        return valueInSystem;
+    }
+
+    public String getValueInComparisonSystem() {
+        return valueInComparisonSystem;
+    }
+
+    // Are the two values being compared really different (or just different objects, but equal in value)
+    public boolean isActualDiff() {
+        return null == valueInSystem || !valueInSystem.equals(valueInComparisonSystem);
+    }
+}
+
